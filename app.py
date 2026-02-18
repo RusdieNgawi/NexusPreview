@@ -14,6 +14,12 @@ app = Flask(__name__, template_folder='.', static_folder='.')
 app.secret_key = os.getenv("SECRET_KEY", "xanadium-super-secret-key-123")
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
+# --- RUTE KHUSUS UNTUK SCRIPT.JS (Agar bisa diakses di root) ---
+@app.route('/script.js')
+def serve_script():
+    # Ini triknya: Mengirim file script.js dari folder root saat browser memintanya
+    return send_from_directory('.', 'script.js')
+
 # KONFIGURASI OAUTH MANUAL (Mencegah Missing jwks_uri)
 oauth = OAuth(app)
 google = oauth.register(
