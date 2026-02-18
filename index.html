@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XanadiumAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        xanadium: { 
+                            blue: '#3b82f6',     /* Biru Utama */
+                            glow: '#60a5fa',     /* Biru Muda untuk Glow */
+                        }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    animation: {
+                        'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                        'fade-in': 'fadeIn 0.4s ease-out forwards',
+                    },
+                    keyframes: {
+                        slideUp: { 
+                            '0%': { transform: 'translateY(40px)', opacity: '0' }, 
+                            '100%': { transform: 'translateY(0)', opacity: '1' } 
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' }
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* GRADASI HITAM-BIRU (NEXUS STYLE) */
+        body {
+            background-color: #000000;
+            /* Gradasi Radial: Biru gelap di atas tengah, menyebar ke hitam pekat */
+            background-image: radial-gradient(circle at 50% -10%, #1e3a8a 0%, #020617 40%, #000000 100%);
+            background-attachment: fixed; /* Agar background tetap saat scroll */
+            color: #e5e5e5;
+        }
+
+        /* Scrollbar Halus */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        .hidden-force { display: none !important; }
+        
+        /* Markdown Styling */
+        .prose p { margin-bottom: 0.6em; line-height: 1.6; }
+        .prose strong { color: #fff; font-weight: 600; }
+        .prose code { background: #1e293b; padding: 2px 5px; border-radius: 4px; font-family: monospace; color: #60a5fa; font-size: 0.9em; border: 1px solid #1e3a8a; }
+        .prose pre { background: #0f172a; padding: 12px; border-radius: 8px; overflow-x: auto; border: 1px solid #1e293b; margin-top: 8px; }
+
+        /* Cursor Efek Mengetik */
+        .typing-cursor::after {
+            content: '▋';
+            display: inline-block;
+            animation: blink 1s step-end infinite;
+            color: #3b82f6;
+            margin-left: 2px;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden relative selection:bg-xanadium-blue selection:text-white">
+
+    <!-- HEADER -->
+    <nav class="absolute top-0 w-full p-6 flex justify-between items-center z-30">
+        <!-- Brand Kecil (Muncul saat chat mode) -->
+        <div id="brand-small" class="opacity-0 transition-all duration-700 transform -translate-y-5 font-bold tracking-wide text-lg pointer-events-none">
+            <span class="text-xanadium-blue drop-shadow-[0_0_15px_rgba(59,130,246,0.6)]">Xanadium</span> AI
+        </div>
+        
+        <!-- Menu Hamburger -->
+        <div class="relative">
+            <button onclick="toggleMenu()" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition text-gray-300 hover:text-white group">
+                <i class="fa-solid fa-bars text-xl group-hover:scale-105 transition-transform"></i>
+            </button>
+            
+            <!-- Dropdown Menu -->
+            <div id="dropdown-menu" class="absolute right-0 mt-2 w-56 bg-[#0f172a]/90 backdrop-blur-xl border border-blue-900/30 rounded-xl shadow-2xl transform scale-95 opacity-0 pointer-events-none transition-all duration-200 origin-top-right z-40">
+                <div class="p-3 border-b border-blue-900/20">
+                    <p class="text-[10px] text-blue-400 uppercase tracking-widest font-semibold ml-2">System Control</p>
+                </div>
+                
+                <!-- Chat Baru (AKTIF) -->
+                <button onclick="resetChat()" class="w-full text-left px-4 py-3 hover:bg-blue-600/20 text-sm flex items-center gap-3 text-white transition-colors">
+                    <i class="fa-solid fa-plus text-xanadium-blue"></i> Chat Baru
+                </button>
+
+                <button onclick="toggleHistory()" class="w-full text-left px-4 py-3 hover:bg-white/5 last:rounded-b-xl text-sm flex items-center gap-3 text-gray-400 transition-colors">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- SIDEBAR HISTORY -->
+    <aside id="history-sidebar" class="fixed inset-y-0 right-0 w-72 bg-[#020617]/95 backdrop-blur-xl border-l border-blue-900/30 transform translate-x-full transition-transform duration-300 z-50 flex flex-col shadow-2xl">
+        <div class="p-6 border-b border-blue-900/20 flex justify-between items-center">
+            <h3 class="font-semibold text-white tracking-wide">Arsip Sesi</h3>
+            <button onclick="toggleHistory()" class="text-gray-500 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+        </div>
+        <div class="flex-1 p-6 text-center text-gray-600 text-sm flex flex-col items-center justify-center">
+            <i class="fa-regular fa-folder-open text-3xl mb-3 opacity-30"></i>
+            <p>Database Kosong.</p>
+        </div>
+    </aside>
+
+    <!-- MAIN AREA -->
+    <main class="flex-1 flex flex-col relative w-full max-w-4xl mx-auto h-full z-10">
+        
+        <!-- WELCOME SCREEN (Gradasi Biru-Hitam Menonjol) -->
+        <div id="welcome-screen" class="absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 z-20 px-4">
+            <div class="text-center space-y-4 animate-fade-in">
+                <!-- Text Only Logo -->
+                <h1 class="text-6xl md:text-8xl font-bold tracking-tight">
+                    <span class="text-xanadium-blue drop-shadow-[0_0_30px_rgba(59,130,246,0.5)]">Xanadium</span> 
+                    <span class="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">AI</span>
+                </h1>
+                <p class="text-blue-200/60 text-lg font-light tracking-wide max-w-md mx-auto">
+                    Kecerdasan Buatan Tanpa Batas.
+                </p>
+            </div>
+        </div>
+
+        <!-- CHAT CONTAINER -->
+        <div id="chat-wrapper" class="flex-1 overflow-y-auto w-full px-4 pb-36 pt-24 opacity-0 translate-y-10 transition-all duration-700 scroll-smooth">
+            <div id="messages-list" class="space-y-6">
+                <!-- Chat Bubbles -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- INPUT AREA -->
+    <footer class="fixed bottom-0 w-full bg-gradient-to-t from-black via-black/95 to-transparent pb-8 pt-12 px-4 z-20">
+        <div class="max-w-3xl mx-auto relative">
+            
+            <!-- Image Preview -->
+            <div id="preview-box" class="hidden mb-3 ml-2 absolute -top-20 left-0 bg-[#0f172a] p-2 rounded-lg border border-blue-900/40 shadow-xl backdrop-blur-md">
+                <div class="relative inline-block group">
+                    <img id="img-preview" src="" class="h-16 w-auto rounded border border-blue-900/50 object-cover">
+                    <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow transition-colors">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="bg-[#0f172a]/80 backdrop-blur-md border border-blue-900/30 rounded-2xl flex items-end p-2 shadow-2xl focus-within:border-xanadium-blue/50 focus-within:ring-1 focus-within:ring-xanadium-blue/20 transition-all duration-300">
+                
+                <button onclick="document.getElementById('file-input').click()" class="p-3 text-gray-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0 mx-1" title="Upload Media">
+                    <i class="fa-solid fa-paperclip text-lg"></i>
+                </button>
+                <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFile(this)">
+
+                <textarea 
+                    id="user-input" 
+                    rows="1" 
+                    class="w-full bg-transparent text-white border-none focus:ring-0 p-3 max-h-32 resize-none placeholder-gray-500 font-light text-base"
+                    placeholder="Kirim pesan..."
+                    oninput="autoResize(this)"
+                    onkeydown="handleEnter(event)"
+                ></textarea>
+
+                <button onclick="sendMessage()" id="send-btn" class="p-3 bg-white/5 hover:bg-xanadium-blue text-white rounded-xl transition-all shrink-0 ml-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p class="text-[10px] text-gray-600 font-medium tracking-widest uppercase">Powered by Xanadium Engine</p>
+            </div>
+        </div>
+    </footer>
+
+    <div id="overlay" onclick="closeAll()" class="fixed inset-0 z-30 hidden bg-black/0 transition-all duration-300"></div>
+
+    <script>
+        const els = {
+            welcome: document.getElementById('welcome-screen'),
+            chatWrap: document.getElementById('chat-wrapper'),
+            msgList: document.getElementById('messages-list'),
+            brand: document.getElementById('brand-small'),
+            input: document.getElementById('user-input'),
+            sendBtn: document.getElementById('send-btn'),
+            menu: document.getElementById('dropdown-menu'),
+            sidebar: document.getElementById('history-sidebar'),
+            overlay: document.getElementById('overlay'),
+            fileIn: document.getElementById('file-input'),
+            previewBox: document.getElementById('preview-box'),
+            imgPreview: document.getElementById('img-preview')
+        };
+        let currentFile = null;
+        let isTyping = false;
+
+        // --- MENU SYSTEM ---
+        function toggleMenu() {
+            if (els.menu.classList.contains('opacity-0')) {
+                els.menu.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+                els.menu.classList.add('scale-100');
+                els.overlay.classList.remove('hidden');
+            } else {
+                closeAll();
+            }
+        }
+
+        function toggleHistory() {
+            els.menu.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+            if (els.sidebar.classList.contains('translate-x-full')) {
+                els.sidebar.classList.remove('translate-x-full');
+                els.overlay.classList.remove('hidden');
+            } else {
+                closeAll();
+            }
+        }
+
+        function closeAll() {
+            els.menu.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+            els.sidebar.classList.add('translate-x-full');
+            els.overlay.classList.add('hidden');
+        }
+
+        // --- CHAT BARU FUNCTION ---
+        function resetChat() {
+            // 1. Reset Content
+            els.msgList.innerHTML = '';
+            
+            // 2. Transisi UI Balik ke Welcome
+            els.chatWrap.classList.add('opacity-0', 'translate-y-10');
+            
+            els.welcome.classList.remove('hidden-force');
+            // Timeout kecil untuk memicu CSS transition opacity
+            setTimeout(() => {
+                els.welcome.style.opacity = '1';
+                els.welcome.style.transform = 'translateY(0)';
+            }, 50);
+
+            // 3. Sembunyikan Brand Kecil
+            els.brand.classList.remove('translate-y-0');
+            els.brand.classList.add('opacity-0', '-translate-y-5');
+
+            // 4. Reset Inputs
+            els.input.value = '';
+            els.input.style.height = 'auto';
+            removeImage();
+            isTyping = false;
+
+            // 5. Tutup Menu
+            closeAll();
+        }
+
+        // --- UI SWITCH ---
+        function switchToChatUI() {
+            // Hilangkan Welcome
+            els.welcome.style.opacity = '0';
+            els.welcome.style.transform = 'translateY(-20px)';
+            setTimeout(() => els.welcome.classList.add('hidden-force'), 600);
+            
+            // Munculkan Chat
+            els.chatWrap.classList.remove('opacity-0', 'translate-y-10');
+            
+            // Munculkan Brand Kecil
+            els.brand.classList.remove('opacity-0', '-translate-y-5');
+            els.brand.classList.add('translate-y-0');
+        }
+
+        // --- INPUTS ---
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                currentFile = input.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    els.imgPreview.src = e.target.result;
+                    els.previewBox.classList.remove('hidden');
+                };
+                reader.readAsDataURL(currentFile);
+            }
+        }
+
+        function removeImage() {
+            currentFile = null;
+            els.fileIn.value = '';
+            els.previewBox.classList.add('hidden');
+        }
+
+        // --- MESSAGING ENGINE ---
+        async function typeWriter(element, text) {
+            const rawHtml = marked.parse(text);
+            element.classList.add('typing-cursor');
+            
+            const words = text.split(" ");
+            let display = "";
+            for (let i = 0; i < words.length; i++) {
+                display += words[i] + " ";
+                element.innerText = display;
+                
+                const isNearBottom = els.chatWrap.scrollHeight - els.chatWrap.scrollTop - els.chatWrap.clientHeight < 100;
+                if(isNearBottom) els.chatWrap.scrollTop = els.chatWrap.scrollHeight;
+                
+                if (i % 5 === 0) await new Promise(r => setTimeout(r, 10));
+            }
+            element.innerHTML = rawHtml;
+            element.classList.remove('typing-cursor');
+            els.chatWrap.scrollTop = els.chatWrap.scrollHeight;
+        }
+
+        function createBubble(isUser, text = '', imgData = null) {
+            const div = document.createElement('div');
+            div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-slide-up group`;
+
+            // Avatar
+            const avatar = isUser 
+                ? `<div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 border border-white/5"><i class="fa-solid fa-user text-xs"></i></div>`
+                : `<div class="w-8 h-8 rounded-full bg-blue-900/30 flex items-center justify-center shrink-0 border border-blue-500/30"><span class="text-xanadium-blue font-bold text-sm">X</span></div>`;
+
+            const imgHtml = imgData ? `<img src="${imgData}" class="max-w-[280px] rounded-lg mb-3 border border-gray-700 shadow-lg">` : '';
+            
+            const bubbleStyle = isUser 
+                ? "bg-[#1e293b] border border-blue-900/40 text-gray-200 rounded-2xl rounded-tr-sm px-5 py-3" 
+                : "text-gray-300 w-full prose prose-invert prose-p:text-gray-300 prose-headings:text-white max-w-none pt-1";
+
+            div.innerHTML = `
+                ${avatar}
+                <div class="flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}">
+                    <div class="${bubbleStyle}">
+                        ${imgHtml}
+                        <div class="msg-content leading-relaxed">${isUser ? text : ''}</div>
+                    </div>
+                </div>
+            `;
+            return div;
+        }
+
+        async function sendMessage() {
+            if (isTyping) return;
+            const text = els.input.value.trim();
+            if (!text && !currentFile) return;
+
+            isTyping = true;
+            els.sendBtn.disabled = true;
+
+            if (!els.welcome.classList.contains('hidden-force')) {
+                switchToChatUI();
+            }
+
+            let imgSrc = currentFile ? els.imgPreview.src : null;
+            els.msgList.appendChild(createBubble(true, text, imgSrc));
+            
+            els.input.value = '';
+            els.input.style.height = 'auto';
+            const filePayload = currentFile;
+            removeImage();
+            
+            els.chatWrap.scrollTo({ top: els.chatWrap.scrollHeight, behavior: 'smooth' });
+
+            const loadingBubble = createBubble(false);
+            loadingBubble.id = "loading-bubble";
+            loadingBubble.querySelector('.msg-content').innerHTML = `
+                <div class="flex space-x-1 h-6 items-center opacity-50">
+                    <div class="w-1.5 h-1.5 bg-xanadium-blue rounded-full animate-bounce"></div>
+                    <div class="w-1.5 h-1.5 bg-xanadium-blue rounded-full animate-bounce delay-75"></div>
+                    <div class="w-1.5 h-1.5 bg-xanadium-blue rounded-full animate-bounce delay-150"></div>
+                </div>
+            `;
+            els.msgList.appendChild(loadingBubble);
+            els.chatWrap.scrollTop = els.chatWrap.scrollHeight;
+
+            const formData = new FormData();
+            formData.append('message', text);
+            if (filePayload) formData.append('file', filePayload);
+
+            try {
+                const res = await fetch('/chat', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                document.getElementById('loading-bubble').remove();
+                
+                const botBubble = createBubble(false);
+                els.msgList.appendChild(botBubble);
+                await typeWriter(botBubble.querySelector('.msg-content'), data.response || "Xanadium tidak merespons.");
+            } catch (e) {
+                document.getElementById('loading-bubble')?.remove();
+                const err = createBubble(false);
+                err.querySelector('.msg-content').innerText = "Koneksi Terputus.";
+                els.msgList.appendChild(err);
+            } finally {
+                isTyping = false;
+                els.sendBtn.disabled = false;
+                els.input.focus();
+                els.chatWrap.scrollTop = els.chatWrap.scrollHeight;
+            }
+        }
+    </script>
+</body>
+</html>
+
+
