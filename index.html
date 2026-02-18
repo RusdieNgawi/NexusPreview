@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexus AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Marked.js untuk parsing Markdown (Bold, Italic, Code) saat mengetik -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        nexus: { blue: '#2563eb', dark: '#020202', panel: '#0f0f12' }
+                    },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    animation: {
+                        'fade-in': 'fadeIn 0.5s ease-out forwards',
+                        'slide-up': 'slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+                    },
+                    keyframes: {
+                        fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+                        slideUp: { 
+                            '0%': { transform: 'translateY(40px)', opacity: '0' }, 
+                            '100%': { transform: 'translateY(0)', opacity: '1' } 
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Background Premium */
+        body {
+            background: radial-gradient(circle at 50% -20%, #111827 0%, #000000 60%);
+            color: #e5e5e5;
+        }
+
+        /* Scrollbar Halus */
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        /* Utilitas Tampilan */
+        .hidden-force { display: none !important; }
+        .opacity-0-force { opacity: 0 !important; pointer-events: none; }
+        
+        /* Markdown Styles dalam Chat */
+        .prose p { margin-bottom: 0.5em; }
+        .prose strong { color: #fff; font-weight: 600; }
+        .prose code { background: #333; padding: 2px 5px; border-radius: 4px; font-family: monospace; font-size: 0.9em; }
+        .prose pre { background: #1a1a1a; padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 5px; }
+
+        /* Cursor Berkedip saat mengetik */
+        .typing-cursor::after {
+            content: '▋';
+            display: inline-block;
+            vertical-align: baseline;
+            animation: blink 1s step-end infinite;
+            color: #2563eb;
+            font-size: 0.8em;
+            margin-left: 2px;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden relative">
+
+    <!-- 1. HEADER (Menu & Brand Kecil) -->
+    <nav class="absolute top-0 w-full p-5 flex justify-between items-center z-30">
+        <!-- Brand Kecil (Muncul saat chat aktif) -->
+        <div id="brand-small" class="opacity-0 transition-all duration-700 transform -translate-y-5 font-bold tracking-wide text-lg">
+            <span class="text-nexus-blue drop-shadow-[0_0_10px_rgba(37,99,235,0.5)]">Nexus</span> AI
+        </div>
+        
+        <!-- Menu Kebab -->
+        <div class="relative">
+            <button onclick="toggleMenu()" class="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition text-gray-400 hover:text-white">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+            <!-- Dropdown -->
+            <div id="dropdown-menu" class="absolute right-0 mt-2 w-48 bg-[#0f0f12] border border-white/10 rounded-xl shadow-2xl transform scale-95 opacity-0 pointer-events-none transition-all duration-200 origin-top-right z-40">
+                <button onclick="resetChat()" class="w-full text-left px-4 py-3 hover:bg-white/5 first:rounded-t-xl text-sm flex items-center gap-3 text-nexus-blue">
+                    <i class="fa-solid fa-plus"></i> Chat Baru
+                </button>
+                <button onclick="toggleHistory()" class="w-full text-left px-4 py-3 hover:bg-white/5 last:rounded-b-xl text-sm flex items-center gap-3 text-gray-300">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Riwayat
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 2. SIDEBAR HISTORY -->
+    <aside id="history-sidebar" class="fixed inset-y-0 right-0 w-72 bg-[#0a0a0a]/95 backdrop-blur-xl border-l border-white/10 transform translate-x-full transition-transform duration-300 z-50 flex flex-col shadow-2xl">
+        <div class="p-5 border-b border-white/10 flex justify-between items-center">
+            <h3 class="font-semibold text-white">Riwayat Sesi</h3>
+            <button onclick="toggleHistory()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+        </div>
+        <div class="flex-1 p-4 text-center text-gray-500 text-sm mt-10">
+            <i class="fa-regular fa-folder-open text-2xl mb-2"></i>
+            <p>Belum ada riwayat tersimpan.</p>
+        </div>
+    </aside>
+
+    <!-- 3. MAIN AREA -->
+    <main class="flex-1 flex flex-col relative w-full max-w-4xl mx-auto h-full">
+        
+        <!-- WELCOME SCREEN (State Awal) -->
+        <div id="welcome-screen" class="absolute inset-0 flex flex-col items-center justify-center transition-all duration-700 z-10">
+            <div class="text-center space-y-6">
+                <h1 class="text-6xl md:text-7xl font-bold tracking-tighter">
+                    <span class="text-nexus-blue drop-shadow-[0_0_25px_rgba(37,99,235,0.4)]">Nexus</span> 
+                    <span class="text-white drop-shadow-[0_0_15px_rgba(255,255,255,0.2)]">AI</span>
+                </h1>
+                <p class="text-gray-500 text-lg font-light tracking-wide animate-pulse">Siap membantu kreativitas Anda.</p>
+            </div>
+        </div>
+
+        <!-- CHAT CONTAINER (State Chat - Awalnya hidden/bawah) -->
+        <div id="chat-wrapper" class="flex-1 overflow-y-auto w-full px-4 pb-32 pt-24 opacity-0 translate-y-10 transition-all duration-700">
+            <div id="messages-list" class="space-y-6">
+                <!-- Chat Bubbles Masuk Sini -->
+            </div>
+        </div>
+
+    </main>
+
+    <!-- 4. INPUT AREA -->
+    <footer class="fixed bottom-0 w-full bg-gradient-to-t from-black via-black/95 to-transparent pb-8 pt-10 px-4 z-20">
+        <div class="max-w-3xl mx-auto">
+            
+            <!-- Image Preview -->
+            <div id="preview-box" class="hidden mb-3 ml-2 animate-fade-in">
+                <div class="relative inline-block group">
+                    <img id="img-preview" src="" class="h-16 w-auto rounded-lg border border-white/20 shadow-lg object-cover">
+                    <button onclick="removeImage()" class="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs shadow transition-colors">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="bg-[#1e1e1e] border border-white/10 rounded-[2rem] flex items-end p-2 shadow-2xl focus-within:border-nexus-blue/50 focus-within:ring-1 focus-within:ring-nexus-blue/20 transition-all duration-300">
+                
+                <!-- Upload Btn -->
+                <button onclick="document.getElementById('file-input').click()" class="p-3 text-gray-400 hover:text-white hover:bg-white/10 rounded-full transition-colors shrink-0 mx-1" title="Tambah Media">
+                    <i class="fa-solid fa-paperclip text-lg"></i>
+                </button>
+                <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFile(this)">
+
+                <!-- Textarea -->
+                <textarea 
+                    id="user-input" 
+                    rows="1" 
+                    class="w-full bg-transparent text-white border-none focus:ring-0 p-3 max-h-32 resize-none placeholder-gray-500 font-light"
+                    placeholder="Kirim pesan ke Nexus..."
+                    oninput="autoResize(this)"
+                    onkeydown="handleEnter(event)"
+                ></textarea>
+
+                <!-- Send Btn -->
+                <button onclick="sendMessage()" id="send-btn" class="p-3 bg-white/10 hover:bg-nexus-blue text-white rounded-full transition-all shrink-0 ml-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-arrow-up"></i>
+                </button>
+            </div>
+            
+            <div class="text-center mt-3">
+                <p class="text-[10px] text-gray-600 font-medium tracking-wider uppercase">Powered by Nexus Neural Engine</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Overlay Click -->
+    <div id="overlay" onclick="closeAll()" class="fixed inset-0 z-30 hidden bg-black/0"></div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // DOM Elements
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const chatWrapper = document.getElementById('chat-wrapper');
+        const messagesList = document.getElementById('messages-list');
+        const brandSmall = document.getElementById('brand-small');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        let currentFile = null;
+        let isTyping = false; // Mencegah spam enter saat AI mengetik
+
+        // --- TRANSITION & UI LOGIC ---
+
+        function switchToChatMode() {
+            // Animasi: Welcome screen naik & hilang
+            welcomeScreen.style.transform = 'translateY(-50px)';
+            welcomeScreen.style.opacity = '0';
+            setTimeout(() => welcomeScreen.classList.add('hidden-force'), 700);
+
+            // Animasi: Chat container muncul & naik ke posisi normal
+            chatWrapper.classList.remove('opacity-0', 'translate-y-10');
+            
+            // Animasi: Brand kecil di atas muncul
+            brandSmall.classList.remove('opacity-0', '-translate-y-5');
+            brandSmall.classList.add('translate-y-0');
+        }
+
+        function resetChat() {
+            // Reset UI ke awal
+            messagesList.innerHTML = '';
+            
+            welcomeScreen.classList.remove('hidden-force');
+            setTimeout(() => {
+                welcomeScreen.style.transform = 'translateY(0)';
+                welcomeScreen.style.opacity = '1';
+            }, 50);
+
+            chatWrapper.classList.add('opacity-0', 'translate-y-10');
+            brandSmall.classList.add('opacity-0', '-translate-y-5');
+            brandSmall.classList.remove('translate-y-0');
+            
+            closeAll();
+            userInput.value = '';
+            removeImage();
+            isTyping = false;
+        }
+
+        // --- MENU LOGIC ---
+        function toggleMenu() {
+            const menu = document.getElementById('dropdown-menu');
+            const overlay = document.getElementById('overlay');
+            if (menu.classList.contains('opacity-0')) {
+                menu.classList.remove('opacity-0', 'pointer-events-none', 'scale-95');
+                menu.classList.add('scale-100');
+                overlay.classList.remove('hidden');
+            } else {
+                closeAll();
+            }
+        }
+
+        function toggleHistory() {
+            const sidebar = document.getElementById('history-sidebar');
+            const overlay = document.getElementById('overlay');
+            if (sidebar.classList.contains('translate-x-full')) {
+                sidebar.classList.remove('translate-x-full');
+                overlay.classList.remove('hidden');
+            } else {
+                sidebar.classList.add('translate-x-full');
+                if (document.getElementById('dropdown-menu').classList.contains('opacity-0')) {
+                    overlay.classList.add('hidden');
+                }
+            }
+        }
+
+        function closeAll() {
+            const menu = document.getElementById('dropdown-menu');
+            const sidebar = document.getElementById('history-sidebar');
+            const overlay = document.getElementById('overlay');
+            
+            menu.classList.add('opacity-0', 'pointer-events-none', 'scale-95');
+            menu.classList.remove('scale-100');
+            sidebar.classList.add('translate-x-full');
+            overlay.classList.add('hidden');
+        }
+
+        // --- INPUT & FILE LOGIC ---
+
+        function autoResize(el) {
+            el.style.height = 'auto';
+            el.style.height = el.scrollHeight + 'px';
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        function handleFile(input) {
+            if (input.files && input.files[0]) {
+                currentFile = input.files[0];
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('img-preview').src = e.target.result;
+                    document.getElementById('preview-box').classList.remove('hidden');
+                };
+                reader.readAsDataURL(currentFile);
+            }
+        }
+
+        function removeImage() {
+            currentFile = null;
+            document.getElementById('file-input').value = '';
+            document.getElementById('preview-box').classList.add('hidden');
+        }
+
+        // --- CHAT & TYPING ANIMATION ---
+
+        async function typeWriterEffect(element, text) {
+            // Parse Markdown dulu
+            const parsedHTML = marked.parse(text);
+            
+            // Kita buat elemen sementara untuk mengambil teks bersih tanpa tag HTML (untuk efek ketik sederhana)
+            // Atau untuk hasil yang lebih bagus, kita render HTML langsung tapi bertahap?
+            // Cara paling aman & cepat: Render HTML hidden, lalu tampilkan per kata.
+            
+            // SIMPLIFIED APPROACH: Streaming Text Content
+            // Untuk demo ini, kita akan ketik teks mentah dulu, lalu replace dengan markdown di akhir
+            // agar formatting tidak rusak di tengah jalan.
+            
+            element.classList.add('typing-cursor');
+            
+            // Mode cepat
+            const words = text.split(" ");
+            let currentText = "";
+            
+            for (let i = 0; i < words.length; i++) {
+                currentText += words[i] + " ";
+                element.innerText = currentText; // Tampilkan teks mentah dulu
+                
+                // Scroll to bottom
+                const chatContainer = document.getElementById('chat-wrapper');
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+
+                // Delay acak biar mirip manusia/mesin berpikir (10ms - 30ms)
+                await new Promise(r => setTimeout(r, 20)); 
+            }
+
+            // Setelah selesai mengetik, render Markdown yang cantik
+            element.innerHTML = parsedHTML; 
+            element.classList.remove('typing-cursor');
+        }
+
+        function createMessageBubble(isUser, text = '', imgData = null) {
+            const div = document.createElement('div');
+            div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} animate-slide-up`;
+
+            // Avatar
+            const avatar = isUser 
+                ? `<div class="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0"><i class="fa-solid fa-user text-xs"></i></div>`
+                : `<div class="w-8 h-8 rounded-full bg-transparent flex items-center justify-center shrink-0"><i class="fa-solid fa-bolt text-nexus-blue text-lg"></i></div>`;
+
+            // Image Content
+            const imgHtml = imgData ? `<img src="${imgData}" class="max-w-[250px] rounded-lg mb-3 border border-white/10">` : '';
+
+            // Bubble Style
+            const bubbleClass = isUser 
+                ? "bg-[#1e1e1e] text-white rounded-2xl rounded-tr-sm px-5 py-3 border border-white/10" 
+                : "text-gray-300 px-0 py-2 w-full prose prose-invert max-w-none"; // Prose untuk markdown
+
+            div.innerHTML = `
+                ${avatar}
+                <div class="flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}">
+                    <div class="${bubbleClass}">
+                        ${imgHtml}
+                        <div class="message-content leading-relaxed">${isUser ? text : ''}</div> 
+                    </div>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        async function sendMessage() {
+            if (isTyping) return; // Jangan kirim kalau sedang mengetik response
+
+            const text = userInput.value.trim();
+            if (!text && !currentFile) return;
+
+            isTyping = true;
+            sendBtn.disabled = true;
+
+            // 1. Pindah UI ke Chat Mode jika ini pesan pertama
+            if (!welcomeScreen.classList.contains('hidden-force') && welcomeScreen.style.opacity !== '0') {
+                switchToChatMode();
+            }
+
+            // 2. Tampilkan Pesan User
+            let userImgSrc = null;
+            if (currentFile) userImgSrc = document.getElementById('img-preview').src;
+            
+            const userBubble = createMessageBubble(true, text, userImgSrc);
+            messagesList.appendChild(userBubble);
+
+            // Bersihkan Input
+            userInput.value = '';
+            userInput.style.height = 'auto';
+            const fileToSend = currentFile;
+            removeImage();
+            
+            // Scroll Bawah
+            const chatContainer = document.getElementById('chat-wrapper');
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+
+            // 3. Loading Placeholder (Bot)
+            const loadingBubble = createMessageBubble(false);
+            loadingBubble.querySelector('.message-content').innerHTML = `
+                <div class="flex space-x-1 h-6 items-center">
+                    <div class="w-1.5 h-1.5 bg-nexus-blue rounded-full animate-bounce"></div>
+                    <div class="w-1.5 h-1.5 bg-nexus-blue rounded-full animate-bounce delay-75"></div>
+                    <div class="w-1.5 h-1.5 bg-nexus-blue rounded-full animate-bounce delay-150"></div>
+                </div>
+            `;
+            loadingBubble.id = "loading-bubble";
+            messagesList.appendChild(loadingBubble);
+            chatContainer.scrollTo({ top: chatContainer.scrollHeight, behavior: 'smooth' });
+
+            // 4. Kirim ke Backend
+            const formData = new FormData();
+            formData.append('message', text);
+            if (fileToSend) formData.append('file', fileToSend);
+
+            try {
+                const res = await fetch('/chat', { method: 'POST', body: formData });
+                const data = await res.json();
+                
+                // Hapus Loading Bubble
+                document.getElementById('loading-bubble').remove();
+
+                // Buat Bubble Bot (Kosong dulu)
+                const botBubble = createMessageBubble(false);
+                messagesList.appendChild(botBubble);
+                const contentDiv = botBubble.querySelector('.message-content');
+
+                // Jalankan Efek Mengetik
+                await typeWriterEffect(contentDiv, data.response || "Maaf, Nexus tidak dapat merespons.");
+
+            } catch (e) {
+                document.getElementById('loading-bubble').remove();
+                const errBubble = createMessageBubble(false);
+                errBubble.querySelector('.message-content').innerText = "Koneksi ke Nexus terputus.";
+                messagesList.appendChild(errBubble);
+            } finally {
+                isTyping = false;
+                sendBtn.disabled = false;
+                userInput.focus();
+            }
+        }
+    </script>
+</body>
+</html>
+
+
