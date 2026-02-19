@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XanadiumAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome & Marked.js (Wajib Ada) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { xanadium: { blue: '#3b82f6', glow: '#60a5fa', dark: '#020617' } },
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    animation: { 'fade-in': 'fadeIn 0.3s ease-out forwards' },
+                    keyframes: { fadeIn: { '0%': { opacity: '0' }, '100%': { opacity: '1' } } }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #000000;
+            background-image: radial-gradient(circle at 50% -20%, #111827 0%, #000000 70%);
+            background-attachment: fixed;
+            color: #e5e5e5;
+        }
+        
+        /* --- STYLE KHUSUS UNTUK MEMAKSA TAMPILAN KODE (FIX) --- */
+        
+        /* 1. Hapus style default pre dari prose tailwind */
+        .prose pre {
+            background-color: transparent !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border-radius: 0 !important;
+        }
+
+        /* 2. Container Utama Code Block */
+        .code-wrapper {
+            position: relative;
+            background: #09090b !important; /* Hitam Pekat */
+            border: 1px solid #27272a;
+            border-radius: 10px;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 3. Header Code Block (Baris Atas) */
+        .code-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #18181b; /* Abu gelap */
+            padding: 8px 16px;
+            border-bottom: 1px solid #27272a;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.75rem;
+            color: #a1a1aa;
+        }
+
+        /* 4. Isi Code Block */
+        .code-content {
+            padding: 16px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            color: #e4e4e7;
+            background-color: #09090b;
+        }
+        
+        /* Pastikan elemen code tidak punya background sendiri */
+        .code-content code {
+            background-color: transparent !important;
+            color: inherit !important;
+            padding: 0 !important;
+            border: none !important;
+        }
+
+        /* 5. Tombol-tombol di Header */
+        .header-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: #a1a1aa;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: color 0.2s;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        .header-btn:hover { color: #fff; background: rgba(255,255,255,0.05); }
+
+        /* Tombol Preview Spesial */
+        .preview-btn {
+            color: #60a5fa; /* Biru */
+            margin-right: 8px;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+        }
+        .preview-btn:hover {
+            background: rgba(59, 130, 246, 0.2);
+            color: #93c5fd;
+        }
+
+        /* Inline Code (bukan blok) */
+        .prose :not(pre) > code {
+            background: #27272a;
+            color: #60a5fa;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+
+        /* Typing Cursor */
+        .typing-cursor::after {
+            content: '▋';
+            display: inline-block;
+            animation: blink 1s infinite;
+            color: #3b82f6;
+            margin-left: 2px;
+        }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden selection:bg-blue-500/30 selection:text-white">
+
+    <!-- SIDEBAR -->
+    <aside id="main-sidebar" class="fixed inset-y-0 left-0 w-72 bg-black/95 backdrop-blur-xl border-r border-white/5 transform -translate-x-full transition-transform duration-300 z-50 flex flex-col">
+        <div class="p-4 border-b border-white/5 flex justify-between items-center">
+            <span class="font-bold text-lg tracking-tight"><span class="text-blue-500">Xanadium</span> AI</span>
+            <button onclick="toggleSidebar()" class="text-gray-500 hover:text-white p-2"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <div class="p-4"><button onclick="createNewChat()" class="w-full bg-blue-600 hover:bg-blue-500 text-white py-3 rounded-lg text-sm font-medium transition flex items-center justify-center gap-2"><i class="fa-solid fa-plus"></i> Chat Baru</button></div>
+        <div class="px-4 py-2 text-[10px] uppercase text-gray-500 font-bold">Riwayat</div>
+        <div id="history-list-container" class="flex-1 overflow-y-auto px-3 space-y-1 pb-4"></div>
+        <div class="p-4 border-t border-white/5 bg-white/5"><div class="flex items-center gap-3"><img src="{{ user_picture }}" onerror="this.src='https://ui-avatars.com/api/?name={{ user_name }}'" class="w-8 h-8 rounded-full"><div class="overflow-hidden"><p class="text-sm font-medium text-white truncate">{{ user_name }}</p></div></div><a href="/logout" class="block mt-3 text-xs text-red-400 hover:text-red-300">Keluar</a></div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <div class="flex-1 flex flex-col h-full relative w-full">
+        <!-- Navbar -->
+        <nav class="absolute top-0 w-full p-4 flex items-center z-30">
+            <button onclick="toggleSidebar()" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center text-gray-300 hover:text-white transition"><i class="fa-solid fa-bars"></i></button>
+            <span id="brand-small" class="ml-4 font-bold text-lg opacity-0 transition-opacity"><span class="text-blue-500">Xanadium</span> AI</span>
+        </nav>
+
+        <!-- Chat Area -->
+        <main class="flex-1 relative w-full max-w-4xl mx-auto h-full overflow-hidden flex flex-col">
+            <div id="welcome-screen" class="absolute inset-0 flex flex-col items-center justify-center z-20 px-4 transition-opacity duration-500">
+                <h1 class="text-5xl font-bold tracking-tight mb-4"><span class="text-blue-500">Xanadium</span> AI</h1>
+                <p class="text-gray-400">Halo, {{ user_name.split(' ')[0] }} Selamat Datang</p>
+            </div>
+            <div id="chat-wrapper" class="flex-1 overflow-y-auto w-full px-4 pt-20 pb-4 opacity-0 transition-opacity duration-500 scroll-smooth">
+                <div id="messages-list" class="space-y-6 pb-24"></div>
+            </div>
+        </main>
+
+        <!-- Input Area -->
+        <footer class="absolute bottom-0 w-full bg-gradient-to-t from-black via-black/95 to-transparent pt-10 pb-6 px-4 z-20">
+            <div class="max-w-3xl mx-auto relative">
+                <!-- Preview Box -->
+                <div id="preview-box" class="hidden mb-2 ml-1 absolute -top-16 left-0 bg-gray-900 p-2 rounded border border-gray-700 flex items-center gap-3">
+                    <img id="img-preview" src="" class="h-10 w-auto rounded hidden">
+                    <div id="file-icon-preview" class="h-10 w-10 bg-gray-800 rounded flex items-center justify-center text-blue-400 hidden"><i class="fa-solid fa-file"></i></div>
+                    <span id="file-name-display" class="text-xs text-gray-300 truncate max-w-[150px]"></span>
+                    <button onclick="removeFile()" class="text-red-400 hover:text-red-300 ml-2"><i class="fa-solid fa-times"></i></button>
+                </div>
+
+                <div class="bg-[#18181b] border border-[#27272a] rounded-xl flex items-end p-2 shadow-lg focus-within:border-blue-500/50 transition-colors">
+                    <button onclick="document.getElementById('file-input').click()" class="p-3 text-gray-400 hover:text-white transition"><i class="fa-solid fa-paperclip"></i></button>
+                    <input type="file" id="file-input" class="hidden" onchange="handleFile(this)">
+                    <textarea id="user-input" rows="1" class="w-full bg-transparent text-white border-none focus:ring-0 p-3 max-h-32 resize-none placeholder-gray-500 text-sm" placeholder="Ketik pesan..." oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage()}"></textarea>
+                    <button onclick="sendMessage()" id="send-btn" class="p-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MODAL PREVIEW HTML -->
+    <div id="code-preview-modal" class="fixed inset-0 z-[60] hidden flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div class="bg-[#09090b] w-full max-w-5xl h-[85vh] rounded-xl border border-gray-800 flex flex-col shadow-2xl overflow-hidden">
+            <div class="p-3 bg-[#18181b] border-b border-gray-800 flex justify-between items-center">
+                <span class="text-gray-400 text-xs font-mono">Live Preview</span>
+                <button onclick="document.getElementById('code-preview-modal').classList.add('hidden')" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <iframe id="preview-frame" class="w-full flex-1 bg-white"></iframe>
+        </div>
+    </div>
+
+    <div id="overlay" onclick="toggleSidebar()" class="fixed inset-0 z-40 hidden bg-black/50 backdrop-blur-sm"></div>
+
+    <script>
+        // ==========================================
+        // 1. KONFIGURASI MARKED (RENDERER KODE)
+        // ==========================================
+        const renderer = new marked.Renderer();
+
+        renderer.code = function(code, language) {
+            const validLang = (language || 'TEXT').toUpperCase();
+            const isHtml = validLang === 'HTML';
+            const id = 'code-' + Math.random().toString(36).substr(2, 9);
+            const escapedCode = code.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+            let buttons = '';
+            // Tombol Preview jika HTML
+            if (isHtml) {
+                buttons += `<button class="header-btn preview-btn" onclick="showPreview('${id}')"><i class="fa-solid fa-play"></i> Preview</button>`;
+            }
+            // Tombol Copy selalu ada
+            buttons += `<button class="header-btn" onclick="copyCode(this, '${id}')"><i class="fa-regular fa-copy"></i> Copy</button>`;
+
+            return `
+            <div class="code-wrapper group">
+                <div class="code-header">
+                    <div class="flex items-center gap-2">
+                        <i class="fa-solid fa-code text-blue-500 text-xs"></i>
+                        <span class="font-bold text-gray-300 tracking-wider">${validLang}</span>
+                    </div>
+                    <div class="flex items-center">${buttons}</div>
+                </div>
+                <div class="code-content">
+                    <pre><code id="${id}" class="language-${language}">${escapedCode}</code></pre>
+                </div>
+            </div>`;
+        };
+
+        marked.setOptions({
+            renderer: renderer,
+            breaks: true, // Penting: enter dihitung baris baru
+            gfm: true     // GitHub Flavored Markdown
+        });
+
+        // ==========================================
+        // 2. FUNGSI UTILITAS (Copy & Preview)
+        // ==========================================
+        function copyCode(btn, id) {
+            const text = document.getElementById(id).textContent;
+            navigator.clipboard.writeText(text);
+            const original = btn.innerHTML;
+            btn.innerHTML = `<i class="fa-solid fa-check text-green-400"></i> Copied!`;
+            setTimeout(() => btn.innerHTML = original, 2000);
+        }
+
+        function showPreview(id) {
+            const code = document.getElementById(id).textContent;
+            const modal = document.getElementById('code-preview-modal');
+            const frame = document.getElementById('preview-frame');
+            frame.srcdoc = code;
+            modal.classList.remove('hidden');
+        }
+
+        // ==========================================
+        // 3. LOGIKA CHAT & ANIMASI (DIPERBAIKI)
+        // ==========================================
+        const els = {
+            input: document.getElementById('user-input'),
+            msgList: document.getElementById('messages-list'),
+            fileIn: document.getElementById('file-input'),
+            sendBtn: document.getElementById('send-btn'),
+            welcome: document.getElementById('welcome-screen'),
+            chatWrap: document.getElementById('chat-wrapper'),
+            previewBox: document.getElementById('preview-box'),
+            imgPreview: document.getElementById('img-preview'),
+            fileIcon: document.getElementById('file-icon-preview'),
+            fileName: document.getElementById('file-name-display')
+        };
+
+        let currentFile = null;
+
+        function createBubble(isUser, text, attachment) {
+            const div = document.createElement('div');
+            div.className = `flex gap-4 ${isUser ? 'flex-row-reverse' : ''} mb-6 animate-fade-in`;
+            
+            const avatar = isUser 
+                ? `<img src="{{ user_picture }}" class="w-8 h-8 rounded-full border border-white/10 shrink-0 mt-1">`
+                : `<div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shrink-0 mt-1"><i class="fa-solid fa-robot text-white text-xs"></i></div>`;
+
+            let attHtml = '';
+            if (attachment) {
+                if (attachment.type === 'image') attHtml = `<img src="${attachment.data}" class="max-w-[200px] rounded-lg mb-2 border border-gray-700">`;
+                else attHtml = `<div class="flex items-center gap-2 bg-gray-800 p-2 rounded mb-2"><i class="fa-solid fa-file text-blue-400"></i><span class="text-xs">${attachment.name}</span></div>`;
+            }
+
+            // Style bubble: User biru tua, Bot transparan (prose)
+            const bubbleStyle = isUser 
+                ? "bg-[#1e293b] text-white px-4 py-3 rounded-2xl rounded-tr-sm border border-blue-900/50" 
+                : "text-gray-300 w-full prose prose-invert max-w-none";
+
+            div.innerHTML = `
+                ${avatar}
+                <div class="flex flex-col max-w-[85%] ${isUser ? 'items-end' : 'items-start'}">
+                    <div class="${bubbleStyle}">
+                        ${attHtml}
+                        <div class="msg-content leading-7 text-sm">${isUser ? text.replace(/\n/g, '<br>') : ''}</div>
+                    </div>
+                </div>`;
+            return div;
+        }
+
+        async function sendMessage() {
+            const text = els.input.value.trim();
+            if (!text && !currentFile) return;
+
+            // UI Updates
+            els.welcome.classList.add('hidden');
+            els.chatWrap.classList.remove('opacity-0');
+            document.getElementById('brand-small').classList.remove('opacity-0');
+            els.sendBtn.disabled = true;
+
+            // 1. User Message
+            let attData = null;
+            if (currentFile) attData = { type: currentFile.type.startsWith('image/') ? 'image' : 'file', data: els.imgPreview.src, name: currentFile.name };
+            els.msgList.appendChild(createBubble(true, text, attData));
+            els.input.value = ''; removeFile(); els.chatWrap.scrollTop = els.chatWrap.scrollHeight;
+
+            // 2. Loading Bot
+            const loaderDiv = document.createElement('div');
+            loaderDiv.innerHTML = `<div class="flex gap-4 mb-6 ml-12"><span class="text-gray-500 text-sm animate-pulse">Sedang mengetik...</span></div>`;
+            els.msgList.appendChild(loaderDiv);
+
+            try {
+                // Prepare Form Data
+                const fd = new FormData();
+                fd.append('message', text);
+                if (els.fileIn.files[0]) fd.append('file', els.fileIn.files[0]);
+
+                const res = await fetch('/chat', { method: 'POST', body: fd });
+                const data = await res.json();
+                
+                loaderDiv.remove();
+
+                // 3. Bot Message & Typing Animation
+                const botDiv = createBubble(false, "");
+                els.msgList.appendChild(botDiv);
+                const contentDiv = botDiv.querySelector('.msg-content');
+                let botText = data.response || "Maaf, error.";
+
+                // HACK PENTING: Tambahkan newline sebelum backticks agar markdown mendeteksi code block
+                // Ini memperbaiki masalah di mana kode muncul sebagai teks biasa
+                botText = botText.replace(/```/g, '\n```');
+
+                contentDiv.classList.add('typing-cursor');
+                
+                // Animasi teks
+                const speed = 5;
+                const chars = botText.split("");
+                let tempRaw = "";
+
+                for(let i=0; i<chars.length; i++) {
+                    tempRaw += chars[i];
+                    contentDiv.textContent = tempRaw; // Tampilkan raw text dulu
+                    if(i % 10 === 0) els.chatWrap.scrollTop = els.chatWrap.scrollHeight;
+                    await new Promise(r => setTimeout(r, speed));
+                }
+
+                // FINISHING TOUCH: Convert Raw Markdown ke HTML Cantik
+                contentDiv.innerHTML = marked.parse(botText);
+                contentDiv.classList.remove('typing-cursor');
+                els.chatWrap.scrollTop = els.chatWrap.scrollHeight;
+
+            } catch (e) {
+                loaderDiv.remove();
+                els.msgList.appendChild(createBubble(false, "Gagal terhubung ke server."));
+            } finally {
+                els.sendBtn.disabled = false;
+                els.input.focus();
+            }
+        }
+
+        // --- File Handling & Sidebar ---
+        function handleFile(input) {
+            if(input.files[0]) {
+                currentFile = input.files[0];
+                els.previewBox.classList.remove('hidden');
+                els.fileName.innerText = currentFile.name;
+                if(currentFile.type.startsWith('image/')) {
+                    const r = new FileReader();
+                    r.onload = e => { els.imgPreview.src = e.target.result; els.imgPreview.classList.remove('hidden'); els.fileIcon.classList.add('hidden'); };
+                    r.readAsDataURL(currentFile);
+                } else {
+                    els.imgPreview.classList.add('hidden'); els.fileIcon.classList.remove('hidden');
+                }
+            }
+        }
+        function removeFile() { els.fileIn.value=''; currentFile=null; els.previewBox.classList.add('hidden'); }
+        function toggleSidebar() { 
+            const sb = document.getElementById('main-sidebar'); 
+            const ov = document.getElementById('overlay');
+            if(sb.classList.contains('-translate-x-full')) { sb.classList.remove('-translate-x-full'); ov.classList.remove('hidden'); }
+            else { sb.classList.add('-translate-x-full'); ov.classList.add('hidden'); }
+        }
+        
+        // Dummy Functions for History (Bisa diimplementasikan nanti)
+        function createNewChat() { location.reload(); } 
+    </script>
+</body>
+</html>
+
+
