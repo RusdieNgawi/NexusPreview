@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sedang Dalam Perbaikan - XanadiumAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background-color: #000000;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        .glow-text {
+            text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col items-center justify-center text-white relative">
+    
+    <!-- Background Accents -->
+    <div class="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
+        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px]"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-600/10 rounded-full blur-[100px]"></div>
+    </div>
+
+    <div class="text-center space-y-6 px-4 max-w-lg">
+        <div class="mb-8 relative inline-block">
+            <i class="fa-solid fa-screwdriver-wrench text-6xl text-blue-500 animate-pulse"></i>
+            <div class="absolute -top-2 -right-2 w-4 h-4 bg-yellow-500 rounded-full animate-ping"></div>
+        </div>
+
+        <h1 class="text-4xl md:text-5xl font-bold tracking-tight glow-text">
+            Sistem Sedang<br><span class="text-blue-500">Upgrade</span>
+        </h1>
+
+        <p class="text-gray-400 text-lg leading-relaxed">
+            XanadiumAI sedang istirahat sebentar untuk peningkatan performa dan penambahan fitur baru. Kami akan segera kembali.
+        </p>
+
+        <div class="pt-8">
+            <div class="inline-flex items-center gap-3 px-5 py-2 rounded-full bg-blue-900/20 border border-blue-500/30 text-sm text-blue-400">
+                <span class="relative flex h-3 w-3">
+                  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+                  <span class="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+                </span>
+                Status: Maintenance Mode Aktif
+            </div>
+        </div>
+    </div>
+
+    <footer class="absolute bottom-10 text-gray-600 text-xs uppercase tracking-widest">
+        &copy; Xanadium Engineering Team
+    </footer>
+
+</body>
+</html>
+
